@@ -22,12 +22,12 @@
                 </h2>
         
                 <p className="text-gray-500 mt-2">
-                    Ready to bring your creative ideas to life?
+                    Ready to bring your creative ideas to life
                 </p>
             </div>
         
             <!--- Hero Section --->
-            <div
+            <div v-if="!$page.props.auth.user.is_admin"
                 className="relative overflow-hidden rounded-2xl p-8 md:p-10 mb-8 shadow-lg border border-gray-200 bg-white">
         
                 <div className="relative z-10 max-w-2xl">

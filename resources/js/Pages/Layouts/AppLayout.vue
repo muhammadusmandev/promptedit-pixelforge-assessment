@@ -24,14 +24,18 @@
                     Dashboard
                     </Link>
 
-                    <Link href="/generations"
+                    <Link v-if="!$page.props.auth.user.is_admin" href="/generations"
                         className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition duration-200">
                     Generations History
                     </Link>
         
-                    <Link href="/generations/create"
+                    <Link v-if="!$page.props.auth.user.is_admin" href="/generations/create"
                         className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition duration-200">
                     Generate Image
+                    </Link>
+                    <Link v-if="$page.props.auth.user.is_admin" href="/admin/reports"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition duration-200">
+                    Report
                     </Link>
                 </div>
         

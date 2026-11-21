@@ -6,11 +6,9 @@ use App\Http\Controllers\{
     PixelforgeWebhookController, 
     GenerationController 
 };
+use App\Http\Controllers\Admin\AdminReportController;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Inertia\Inertia;
-
-Route::get('/', function () {
-    return Inertia::render('Home');
-});
 
 Route::post(
     '/webhooks/pixelforge',
@@ -18,11 +16,11 @@ Route::post(
 )->name('webhooks.pixelforge');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function () {
+    Route::get('/{path?}', function () {
         return Inertia::render('Dashboard', [
             'user' => auth()->user(),
         ]);
-    })->name('dashboard');
+    })->where('path', 'dashboard?')->name('dashboard');
 
     Route::get('/generations', [
         GenerationController::class,
@@ -42,4 +40,18 @@ Route::middleware('auth')->group(function () {
         '/generations/pricing',
         GenerationPricingController::class
     )->name('generations.pricing');
+});
+
+Route::middleware(['auth', EnsureUserIsAdmin::class])
+    ->prefix('admin')->name('admin.')->group(function () {
+    Route::get(
+        '/reports',
+        [AdminReportController::class, 'index']
+    )->name('reports');
+
+    Route::get(
+        '/reports/data',
+        [AdminReportController::class, 'data']
+    )->name('reports.data');
+
 });
