@@ -25,6 +25,11 @@
                     Ready to bring your creative ideas to life
                 </p>
             </div>
+
+            <Link v-if="$page.props.auth.user.is_admin" href="/admin/reports"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-500 transition shadow-md">
+            View Financial Report →
+            </Link>
         
             <!--- Hero Section --->
             <div v-if="!$page.props.auth.user.is_admin"

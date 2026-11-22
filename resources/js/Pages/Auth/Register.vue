@@ -16,6 +16,11 @@
 <template>
     <div class="min-h-screen flex items-center justify-center bg-gray-100">
         <div class="w-full max-w-md bg-white p-8 rounded-xl shadow">
+            <div className="flex items-center justify-center">
+                <img src="https://assets.contentcreatortemplates.com/8015fcc6-8e87-47a9-8341-af5a19dd8368/assets/prompt-edit-logo-with-name-dark.png"
+                    alt="Application Logo" className="h-12 w-auto object-contain" />
+            </div>
+            
             <h1 class="text-2xl font-bold mb-6 text-center">
                 Create Account
             </h1>

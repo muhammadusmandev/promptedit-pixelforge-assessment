@@ -36,4 +36,9 @@ class Generation extends Model
             'provider_cost' => 'decimal:9',
         ];
     }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }

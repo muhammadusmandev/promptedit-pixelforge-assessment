@@ -9,33 +9,39 @@ class AdminReportResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $data = (array) $this->resource;
-
         return [
-            'date' => $data['date'] ?? null,
+            'date' => data_get($this->resource, 'date'),
 
-            'user_id' => isset($data['user_id'])
-                ? (int) $data['user_id']
+            'user_id' => data_get($this->resource, 'user_id') !== null
+                ? (int) data_get($this->resource, 'user_id')
                 : null,
 
-            'user_name' => $data['user_name'] ?? null,
+            'user_name' => data_get($this->resource, 'user_name'),
 
-            'email' => $data['email'] ?? null,
+            'email' => data_get($this->resource, 'email'),
 
-            'generations' => (int) (
-                $data['generations'] ?? 0
+            'generations' => (int) data_get(
+                $this->resource,
+                'generations',
+                0
             ),
 
-            'user_charges' => (string) (
-                $data['user_charges'] ?? '0.000000000'
+            'user_charges' => (string) data_get(
+                $this->resource,
+                'user_charges',
+                '0'
             ),
 
-            'provider_costs' => (string) (
-                $data['provider_costs'] ?? '0.000000000'
+            'provider_costs' => (string) data_get(
+                $this->resource,
+                'provider_costs',
+                '0'
             ),
 
-            'profit' => (string) (
-                $data['profit'] ?? '0.000000000'
+            'profit' => (string) data_get(
+                $this->resource,
+                'profit',
+                '0'
             ),
         ];
     }
