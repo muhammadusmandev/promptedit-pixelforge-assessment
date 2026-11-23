@@ -7,7 +7,7 @@
     import {
         money,
         formatDate,
-    } from '../../../Utils/financialFormatting';
+    } from '../../../utils/financialFormatting';
 
     const props = defineProps({
         filters: {
