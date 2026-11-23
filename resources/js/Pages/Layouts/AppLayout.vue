@@ -12,8 +12,7 @@
                 <!--- Left: Logo --->
                 <div className="flex items-center">
                     <Link href="/dashboard">
-                    <img src="https://assets.contentcreatortemplates.com/8015fcc6-8e87-47a9-8341-af5a19dd8368/assets/prompt-edit-logo-with-name-dark.png"
-                        alt="Application Logo" className="h-10 w-auto object-contain" />
+                    <img src="../../assets/images/prompt-edit-logo.png" alt="PromptEdit Logo" className="h-10 w-auto object-contain" />
                     </Link>
                 </div>
         
@@ -42,7 +41,7 @@
                 <!--- Right: Logout --->
                 <div>
                     <Link href="/logout" method="post" as="button"
-                        className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-5 py-2 rounded-lg shadow-sm hover:shadow transition duration-200">
+                        className="bg-red-500 hover:bg-red-600 hover:cursor-pointer text-white text-sm font-medium px-5 py-2 rounded-lg shadow-sm hover:shadow transition duration-200">
                     Logout
                     </Link>
                 </div>

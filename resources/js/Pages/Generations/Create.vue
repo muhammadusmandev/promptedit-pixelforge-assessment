@@ -1,8 +1,11 @@
 <script setup>
-    import { ref, watch, onBeforeUnmount } from 'vue';
     import { useForm, Link } from '@inertiajs/vue3';
     import AppLayout from '../Layouts/AppLayout.vue';
-    import axios from 'axios';
+
+    import { useGenerationPricing } from '../../composables/useGenerationPricing';
+    import { isValidReferenceImageUrl } from '../../utils/generationValidation';
+
+    const maxImages = 4;
 
     const form = useForm({
         prompt: '',
@@ -11,140 +14,13 @@
         reference_images: [],
     });
 
-    const maxImages = 4;
-
-    // Pricing states
-    const priceStatus = ref('loading');
-    const pricePreview = ref(null);
-    const priceError = ref('');
-
-    let debounceTimer = null;
-    let abortController = null;
-    let requestVersion = 0;
-
-    // Cancel old requests and calculate new pricing.
-    watch(
-        () => [
-            form.prompt,
-            form.size,
-            form.quality,
-            form.reference_images.join('|'),
-        ],
-        () => {
-            calculatePricing();
-        },
-        { immediate: true }
-    );
-
-    function calculatePricing() {
-        // Cancel pending timer.
-        clearTimeout(debounceTimer);
-
-        // Cancel previous API request.
-        if (abortController) {
-            abortController.abort();
-        }
-
-        // Identify this calculation.
-        const currentVersion = ++requestVersion;
-
-        // Immediately invalidate previous pricing.
-        pricePreview.value = null;
-        priceError.value = '';
-        priceStatus.value = 'loading';
-
-        debounceTimer = setTimeout(async () => {
-
-            // Validate pricing inputs before calling backend.
-            if (form.prompt.length > 4000) {
-                showPricingError('Prompt cannot exceed 4,000 characters.');
-                return;
-            }
-
-            if (form.reference_images.length > maxImages) {
-                showPricingError('Maximum 4 reference images allowed.');
-                return;
-            }
-
-            const referenceImages = form.reference_images
-                .map(url => url.trim())
-                .filter(Boolean);
-
-            for (const url of referenceImages) {
-                try {
-                    const parsed = new URL(url);
-
-                    if (!['http:', 'https:'].includes(parsed.protocol)) {
-                        throw new Error('Invalid protocol');
-                    }
-                } catch {
-                    showPricingError(
-                        'Please enter valid HTTP or HTTPS reference image URLs.'
-                    );
-                    return;
-                }
-            }
-
-            abortController = new AbortController();
-
-            try {
-                const response = await axios.post(
-                    '/generations/pricing',
-                    {
-                        prompt: form.prompt,
-                        size: form.size,
-                        quality: form.quality,
-                        reference_images: referenceImages,
-                    },
-                    {
-                        signal: abortController.signal,
-                    }
-                );
-
-                // Ignore outdated responses.
-                if (currentVersion !== requestVersion) {
-                    return;
-                }
-
-                if (!response.data.success || !response.data.pricing) {
-                    throw new Error('Pricing calculation failed.');
-                }
-
-                pricePreview.value = response.data.pricing;
-                priceStatus.value = 'ready';
-
-            } catch (error) {
-
-                // Ignore intentionally cancelled requests.
-                if (error.code === 'ERR_CANCELED' ||
-                    error.name === 'CanceledError') {
-                    return;
-                }
-
-                if (currentVersion !== requestVersion) {
-                    return;
-                }
-
-                showPricingError(
-                    error.response?.data?.message ||
-                    'Unable to calculate pricing. Please try again.'
-                );
-            }
-
-        }, 400);
-    }
-
-    function showPricingError(message) {
-        pricePreview.value = null;
-        priceStatus.value = 'error';
-        priceError.value = message;
-    }
-
-    // Clean up when leaving the page.
-    onBeforeUnmount(() => {
-        clearTimeout(debounceTimer);
-        abortController?.abort();
-    });
+    // Pricing
+    const {
+        priceStatus,
+        pricePreview,
+        priceError,
+        calculatePricing,
+    } = useGenerationPricing(form, maxImages);
 
     // Reference images
     const addImage = () => {
@@ -157,7 +33,7 @@
         form.reference_images.splice(index, 1);
     };
 
-    // Existing form validation and submission.
+    // Form submission
     const submit = () => {
         form.clearErrors();
 
@@ -187,13 +63,7 @@
                 return;
             }
 
-            try {
-                const parsed = new URL(url);
-
-                if (!['http:', 'https:'].includes(parsed.protocol)) {
-                    throw new Error();
-                }
-            } catch {
+            if (!isValidReferenceImageUrl(url)) {
                 form.setError(
                     `reference_images.${i}`,
                     'Please enter a valid HTTP or HTTPS URL.'
@@ -203,15 +73,20 @@
         }
 
         // Never submit without a successful latest price calculation.
-        if (priceStatus.value !== 'ready' || !pricePreview.value || form.processing) {
+        if (
+            priceStatus.value !== 'ready' ||
+            !pricePreview.value ||
+            form.processing
+        ) {
             return;
         }
 
         form.post('/generations', {
             preserveScroll: true,
         });
-    }
+    };
 </script>
+
 
 <template>
     <AppLayout>
@@ -565,7 +440,7 @@
                     <div class="pt-5 border-t border-gray-100">
 
                         <button type="submit" :disabled="form.processing || priceStatus !== 'ready' || !pricePreview"
-                            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl p-4 transition">
+                            class="w-full bg-blue-600 hover:bg-blue-700 hover:cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl p-4 transition">
                             <span v-if="form.processing">
                                 Submitting...
                             </span>

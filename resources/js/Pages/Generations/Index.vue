@@ -1,7 +1,13 @@
 <script setup>
-    import { Link, router } from '@inertiajs/vue3';
-    import AppLayout from '../Layouts/AppLayout.vue';
     import { computed, onMounted, onUnmounted, ref } from 'vue';
+    import { Link, router } from '@inertiajs/vue3';
+
+    import AppLayout from '../Layouts/AppLayout.vue';
+    import {
+        formatCost,
+        statusClass,
+        statusLabel,
+    } from '../../utils/generation';
 
     const props = defineProps({
         generations: {
@@ -10,58 +16,25 @@
         },
     });
 
+    // State
     let pollingInterval = null;
     let isReloading = false;
 
     const failedImages = ref(new Set());
 
+    // --------------------------------------------------
+    // Computed
+    // --------------------------------------------------
     const hasPendingGenerations = computed(() => {
         return props.generations.data.some(generation =>
             ['queued', 'processing'].includes(generation.status)
         );
     });
 
-    // Format USD costs without losing decimal precision.
-    const formatCost = (cost) => {
-        if (cost === null || cost === undefined || cost === '') {
-            return 'Pending';
-        }
-
-        const [whole, fraction = ''] = String(cost).split('.');
-
-        const trimmedFraction = fraction.replace(/0+$/, '');
-
-        const decimals = trimmedFraction.length < 2
-            ? fraction.slice(0, 2).padEnd(2, '0')
-            : trimmedFraction;
-
-        return '$' + whole + '.' + decimals;
-    };
-
-    // Status styling.
-    const statusClass = (status) => {
-        const classes = {
-            queued: 'bg-yellow-100 text-yellow-800',
-            processing: 'bg-blue-100 text-blue-800',
-            succeeded: 'bg-green-100 text-green-800',
-            failed: 'bg-red-100 text-red-800',
-        };
-
-        return classes[status] || 'bg-gray-100 text-gray-700';
-    };
-
-    const statusLabel = (status) => {
-        const labels = {
-            queued: 'Queued',
-            processing: 'Processing',
-            succeeded: 'Succeeded',
-            failed: 'Failed',
-        };
-
-        return labels[status] || status;
-    };
-
+    // --------------------------------------------------
+    // Image Handling
     // Handle expired or unavailable Pixelforge image URLs.
+    // --------------------------------------------------
     const markImageUnavailable = (id) => {
         failedImages.value = new Set([
             ...failedImages.value,
@@ -69,7 +42,10 @@
         ]);
     };
 
+    // --------------------------------------------------
+    // Automatic Generation Refresh
     // Poll only while there are unfinished generations.
+    // --------------------------------------------------
     const refreshGenerations = () => {
         if (!hasPendingGenerations.value || isReloading) {
             return;
@@ -87,6 +63,9 @@
         });
     };
 
+    // --------------------------------------------------
+    // Lifecycle
+    // --------------------------------------------------
     onMounted(() => {
         pollingInterval = setInterval(
             refreshGenerations,
@@ -162,7 +141,7 @@
 
                 <Link href="/generations/create" class="inline-block mt-5 bg-blue-600 text-white
                            px-5 py-3 rounded-lg hover:bg-blue-700">
-                Create your first image
+                Generate your first image
                 </Link>
             </div>
 

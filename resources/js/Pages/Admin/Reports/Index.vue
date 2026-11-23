@@ -1,7 +1,13 @@
 <script setup>
     import { computed, reactive } from 'vue'
     import { router } from '@inertiajs/vue3'
+
     import AppLayout from '../../Layouts/AppLayout.vue'
+
+    import {
+        money,
+        formatDate,
+    } from '../../../Utils/financialFormatting';
 
     const props = defineProps({
         filters: {
@@ -28,15 +34,7 @@
         per_page: props.filters.per_page ?? 10,
     })
 
-    const money = (value) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(Number(value || 0))
-    }
-
+    // Chart data
     const chartData = computed(() => {
         return [...props.daily].reverse()
     })
@@ -50,6 +48,7 @@
         )
     })
 
+    // Filters
     const applyFilters = () => {
         router.get('/admin/reports', form, {
             preserveState: true,
@@ -59,12 +58,20 @@
     }
 
     const resetFilters = () => {
-        form.start_date = props.filters.start_date
-        form.end_date = props.filters.end_date
+        // reset to last 30 days
+        const today = new Date();
+        const last30Days = new Date();
+
+        last30Days.setDate(today.getDate() - 29);
+
+        form.start_date = last30Days.toISOString().split('T')[0];
+        form.end_date = today.toISOString().split('T')[0];
+        form.per_page = 10;
 
         applyFilters()
     }
 
+    // Pagination
     const changePage = (url) => {
         if (!url) return
 
@@ -72,19 +79,6 @@
             preserveState: true,
             preserveScroll: true,
         })
-    }
-
-    const formatDate = (date) => {
-        if (!date) return '-'
-
-        return new Date(date + 'T00:00:00').toLocaleDateString(
-            'en-US',
-            {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-            }
-        )
     }
 </script>
 
@@ -359,261 +353,4 @@
     </AppLayout>
 </template>
 
-<style scoped>
-    .admin-page {
-        padding: 30px;
-        background: #f8fafc;
-        min-height: 100vh;
-        color: #172033;
-    }
-
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 25px;
-    }
-
-    .page-header h1 {
-        font-size: 27px;
-        font-weight: 700;
-    }
-
-    .page-header p,
-    .section-heading p {
-        color: #64748b;
-        margin-top: 5px;
-    }
-
-    .filter-card,
-    .report-card {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 22px;
-        margin-bottom: 22px;
-    }
-
-    .filter-card {
-        display: flex;
-        align-items: end;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-
-    .filter-field {
-        display: flex;
-        flex-direction: column;
-        gap: 7px;
-    }
-
-    .filter-field label {
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .filter-field input,
-    .filter-field select {
-        padding: 10px;
-        border: 1px solid #cbd5e1;
-        border-radius: 7px;
-    }
-
-    .filter-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    button {
-        padding: 10px 16px;
-        border-radius: 7px;
-        border: 0;
-        background: #2563eb;
-        color: white;
-        cursor: pointer;
-    }
-
-    button:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-
-    button.secondary {
-        background: #64748b;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
-        margin-bottom: 22px;
-    }
-
-    .stat-card {
-        background: white;
-        padding: 22px;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-    }
-
-    .stat-card span {
-        color: #64748b;
-        font-size: 14px;
-    }
-
-    .stat-card h2 {
-        font-size: 25px;
-        margin: 12px 0;
-        font-weight: 700;
-    }
-
-    .stat-card small {
-        color: #94a3b8;
-    }
-
-    .profit-card h2,
-    .profit {
-        color: #16a34a;
-    }
-
-    .failed-card h2 {
-        color: #dc2626;
-    }
-
-    .section-heading {
-        margin-bottom: 22px;
-    }
-
-    .section-heading h2 {
-        font-size: 19px;
-        font-weight: 700;
-    }
-
-    .chart {
-        height: 260px;
-        display: flex;
-        gap: 15px;
-        overflow-x: auto;
-        align-items: stretch;
-        padding-top: 15px;
-    }
-
-    .chart-column {
-        flex: 1;
-        min-width: 75px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .chart-column strong {
-        font-size: 11px;
-    }
-
-    .chart-column small {
-        font-size: 11px;
-        color: #64748b;
-        white-space: nowrap;
-    }
-
-    .bar-container {
-        height: 175px;
-        width: 32px;
-        display: flex;
-        align-items: end;
-        background: #f1f5f9;
-        border-radius: 6px;
-        overflow: hidden;
-    }
-
-    .bar {
-        background: #3b82f6;
-        width: 100%;
-        border-radius: 6px;
-        min-height: 4px;
-    }
-
-    .table-wrapper {
-        width: 100%;
-        overflow-x: auto;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-    }
-
-    th,
-    td {
-        padding: 14px;
-        border-bottom: 1px solid #e2e8f0;
-        white-space: nowrap;
-    }
-
-    th {
-        color: #64748b;
-        font-size: 13px;
-        background: #f8fafc;
-    }
-
-    td {
-        font-size: 14px;
-    }
-
-    .email {
-        display: block;
-        color: #64748b;
-        margin-top: 4px;
-    }
-
-    .empty-state {
-        padding: 30px;
-        text-align: center;
-        color: #94a3b8;
-    }
-
-    .pagination {
-        display: flex;
-        justify-content: end;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 20px;
-    }
-
-    .pagination button {
-        background: #e2e8f0;
-        color: #334155;
-    }
-
-    .pagination button.active {
-        background: #2563eb;
-        color: white;
-    }
-
-    @media (max-width: 900px) {
-        .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-
-    @media (max-width: 600px) {
-        .admin-page {
-            padding: 15px;
-        }
-
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .filter-card {
-            align-items: stretch;
-            flex-direction: column;
-        }
-
-        .filter-field input,
-        .filter-field select {
-            width: 100%;
-        }
-    }
-</style>
+<style scoped src="../../../styles/admin/reports.css"></style>
