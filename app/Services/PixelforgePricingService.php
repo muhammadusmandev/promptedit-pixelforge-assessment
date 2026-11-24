@@ -107,6 +107,8 @@ class PixelforgePricingService
             'reasoning_tokens' => $reasoning['max'],
         ], $rates);
 
+        $maximumCostWithMarkup = intdiv($maximumCost * 125 + 99, 100);    // Apply 25% markup
+
         return [
             'currency' => $pricing['currency'],
 
@@ -141,6 +143,7 @@ class PixelforgePricingService
             'cost' => [
                 'minimum' => formatNanoDollars($minimumCost),
                 'maximum' => formatNanoDollars($maximumCost),
+                'maximum_with_markup' => formatNanoDollars($maximumCostWithMarkup)
             ],
 
             'rates' => $rates,

@@ -8,6 +8,10 @@ use InvalidArgumentException;
 
 class GenerationStatusService
 {
+    public function __construct(
+        private CreditService $creditService
+    ) {}
+
     /**
      * Apply the latest provider generation object.
      */
@@ -76,6 +80,9 @@ class GenerationStatusService
                 $local->completed_at = $providerData['completed_at'] ?? now();
 
                 $local->save();
+
+                $this->creditService->refundGeneration($local);
+
                 return;
             }
 
@@ -111,6 +118,11 @@ class GenerationStatusService
             $local->completed_at = $providerData['completed_at'] ?? now();
 
             $local->save();
+
+            $this->creditService->settle(
+                $local,
+                $local->actual_cost
+            );
         });
     }
 

@@ -4,7 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
     GenerationPricingController, 
     PixelforgeWebhookController, 
-    GenerationController 
+    GenerationController,
+    CreditController
 };
 use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Middleware\EnsureUserIsAdmin;
@@ -33,13 +34,25 @@ Route::middleware('auth')->group(function () {
     ])->name('generations.store');
 
     Route::get('/generations/create', function () {
-        return Inertia::render('Generations/Create');
+        return Inertia::render('Generations/Create', [
+            'balance' => auth()->user()->credit_balance,
+        ]);
     })->name('generations.create');
 
     Route::post(
         '/generations/pricing',
         GenerationPricingController::class
     )->name('generations.pricing');
+
+    Route::get('/credits', [
+        CreditController::class,
+        'index',
+    ])->name('credits.index');
+
+    Route::post('/credits/purchase', [
+        CreditController::class,
+        'purchase',
+    ])->name('credits.purchase');
 });
 
 Route::middleware(['auth', EnsureUserIsAdmin::class])

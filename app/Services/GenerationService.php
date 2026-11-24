@@ -25,7 +25,8 @@ class GenerationService
 {
     public function __construct(
         private PixelforgeService $pixelforge,
-        private PixelforgePricingService $pricingService
+        private PixelforgePricingService $pricingService,
+        private CreditService $creditService
     ) {}
 
     /**
@@ -58,15 +59,56 @@ class GenerationService
         $referenceImages = $validated['reference_images'] ?? [];
 
         // Create the local generation before contacting the provider.
-        $generation = Generation::create([
-            'user_id' => $user->id,
-            'prompt' => $validated['prompt'],
-            'size' => $validated['size'],
-            'quality' => $validated['quality'],
-            'reference_urls' => $referenceImages,
-            'status' => 'queued',
-            'estimated_cost' => $estimatedCost,
-        ]);
+        try {
+            $generation = DB::transaction(function () use (
+                $user,
+                $validated,
+                $referenceImages,
+                $estimatedCost
+            ) {
+                $generation = Generation::create([
+                    'user_id' => $user->id,
+                    'prompt' => $validated['prompt'],
+                    'size' => $validated['size'],
+                    'quality' => $validated['quality'],
+                    'reference_urls' => $referenceImages,
+                    'status' => 'queued',
+                    'estimated_cost' => $estimatedCost,
+                ]);
+
+                $this->creditService->reserve(
+                    $user,
+                    $generation,
+                    $estimatedCost
+                );
+
+                return $generation;
+            });
+
+        } catch (\RuntimeException $exception) {
+            if (str_contains($exception->getMessage(), 'Insufficient credits')) {
+                return $this->failure(
+                    'credits',
+                    'Insufficient credits. Please buy more credits.'
+                );
+            }
+
+            report($exception);
+
+            return $this->failure(
+                'generation',
+                'Unable to reserve credits. Please try again.'
+            );
+
+        } catch (\Throwable $exception) {
+
+            report($exception);
+
+            return $this->failure(
+                'generation',
+                'Something went wrong. Please try again.'
+            );
+        }
 
         /*
          * Generate an idempotency key for this submission.
@@ -258,6 +300,8 @@ class GenerationService
         $generation->update([
             'status' => 'failed',
         ]);
+
+        $this->creditService->refundGeneration($generation);
 
         return $this->failure(
             'generation',

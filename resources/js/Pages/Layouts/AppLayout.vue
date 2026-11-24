@@ -32,14 +32,31 @@
                         className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition duration-200">
                     Generate Image
                     </Link>
+                    <Link v-if="!$page.props.auth.user.is_admin" href="/credits"
+                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition duration-200">
+                    My Credits
+                    </Link>
                     <Link v-if="$page.props.auth.user.is_admin" href="/admin/reports"
                         class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition duration-200">
                     Financial Reports
                     </Link>
                 </div>
         
-                <!--- Right: Logout --->
-                <div>
+                <!--- Right: Available Credits, Logout --->
+                <div className="flex gap-3">
+                    <div class="border border-gray-200 px-2 py-1 rounded-lg" v-if="!$page.props.auth.user.is_admin">
+                        <p class="text-md font-bold text-gray-900 mt-1">
+                            <span class="text-sm font-normal text-gray-500">
+                                Available Credits:
+                            </span>
+                            ${{ Number($page.props.auth.user.balance).toFixed(9) }}
+                        </p>
+                    </div>
+                    <Link v-if="!$page.props.auth.user.is_admin" href="/credits" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                    
+                    + Buy Credits
+                    </Link>
                     <Link href="/logout" method="post" as="button"
                         className="bg-red-500 hover:bg-red-600 hover:cursor-pointer text-white text-sm font-medium px-5 py-2 rounded-lg shadow-sm hover:shadow transition duration-200">
                     Logout

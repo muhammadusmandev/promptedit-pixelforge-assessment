@@ -23,13 +23,16 @@ class GenerationController extends Controller
      */
     public function index()
     {
+        $user = Auth::user();
+
         $generations = Generation::query()
-            ->where('user_id', Auth::id())
+            ->where('user_id', $user->id)
             ->latest()
-            ->paginate(12);
+            ->paginate(10);
 
         return Inertia::render('Generations/Index', [
             'generations' => GenerationResource::collection($generations),
+            'balance' => $user->credit_balance,
         ]);
     }
 

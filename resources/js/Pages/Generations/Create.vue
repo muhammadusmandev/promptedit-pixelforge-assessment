@@ -5,6 +5,13 @@
     import { useGenerationPricing } from '../../composables/useGenerationPricing';
     import { isValidReferenceImageUrl } from '../../utils/generationValidation';
 
+    const props = defineProps({
+        balance: {
+            type: String,
+            required: true,
+        },
+    });
+
     const maxImages = 4;
 
     const form = useForm({
@@ -106,11 +113,26 @@
                 <p class="text-gray-500 mt-2">
                     Describe your idea and let AI bring it to life.
                 </p>
+            </div>
 
-                <div v-if="form.errors.generation || form.errors.pricing"
-                    class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
-                    {{ form.errors.generation || form.errors.pricing }}
+            <!-- User Credits -->
+            <div class="bg-white border border-gray-200 rounded-xl p-5 mb-5
+                        flex justify-between items-center gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">
+                        Available Credits
+                    </p>
+            
+                    <p class="text-2xl font-bold text-gray-900 mt-1">
+                        ${{ Number(props.balance).toFixed(9) }}
+                    </p>
                 </div>
+            
+                <Link href="/credits" class="bg-blue-600 hover:bg-blue-700 text-white
+                           px-4 py-2 rounded-lg text-sm font-semibold">
+            
+                + Buy Credits
+                </Link>
             </div>
 
             <!-- Generation Form -->
@@ -335,22 +357,6 @@
 
                             <!-- Pricing Result -->
                             <div v-else-if="priceStatus === 'ready' && pricePreview">
-
-                                <!-- Estimated cost range -->
-                                <div class="mb-6">
-
-                                    <div class="bg-blue-50 rounded-xl p-4">
-                                        <p class="text-xs text-blue-600">
-                                            Maximum estimate (Without Markup)
-                                        </p>
-
-                                        <h2 class="text-2xl font-bold text-blue-700 mt-2">
-                                            ${{ pricePreview.cost.maximum }}
-                                        </h2>
-                                    </div>
-
-                                </div>
-
                                 <!-- Calculation breakdown -->
                                 <h4 class="font-semibold text-gray-800 mb-3">
                                     Token Calculation
@@ -422,7 +428,35 @@
                                             {{ pricePreview.currency }}
                                         </span>
                                     </div>
+                                </div>
 
+                                <!-- Estimated cost -->
+                                <div class="flex gap-4 mt-4">
+                                    <div class="mb-6">
+                                
+                                        <div class="bg-blue-50 rounded-xl p-4">
+                                            <p class="text-xs text-blue-600">
+                                                Maximum estimate (With 0% Markup)
+                                            </p>
+                                
+                                            <h2 class="text-2xl font-bold text-blue-700 mt-2">
+                                                ${{ pricePreview.cost.maximum }}
+                                            </h2>
+                                        </div>
+                                    </div>
+                                
+                                    <div class="mb-6">
+                                
+                                        <div class="bg-blue-50 rounded-xl p-4">
+                                            <p class="text-xs text-blue-600">
+                                                Maximum estimate (With 25% Markup)
+                                            </p>
+                                
+                                            <h2 class="text-2xl font-bold text-blue-700 mt-2">
+                                                ${{ pricePreview.cost.maximum_with_markup }}
+                                            </h2>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <p class="text-xs text-gray-400 mt-5 leading-relaxed">
@@ -434,6 +468,11 @@
                             </div>
 
                         </div>
+                    </div>
+
+                    <div v-if="form.errors.generation || form.errors.pricing || form.errors.credits"
+                        class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+                        {{ form.errors.generation || form.errors.pricing || form.errors.credits }}
                     </div>
 
                     <!-- GENERATE BUTTON -->

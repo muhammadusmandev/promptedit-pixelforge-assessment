@@ -126,7 +126,7 @@
             </div>
 
             <!-- Empty state -->
-            <div v-if="!generations.data.length" class="bg-white border rounded-xl p-12 text-center">
+            <div v-if="!generations.data.length" class="bg-white border border-gray-200 rounded-xl p-12 text-center">
                 <div class="text-4xl mb-4">
                     🖼️
                 </div>
@@ -249,7 +249,7 @@
                                 <div class="grid grid-cols-1 sm:grid-cols-2
                                             gap-3 mt-5">
 
-                                    <div class="bg-gray-50 border rounded-lg p-4">
+                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
 
                                         <p class="text-xs text-gray-500">
                                             Estimated Cost (With 25% Markup)
@@ -261,10 +261,10 @@
 
                                     </div>
 
-                                    <div class="bg-gray-50 border rounded-lg p-4">
+                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
 
                                         <p class="text-xs text-gray-500">
-                                            Actual Cost (With 25% Markup)
+                                            Actual/Billed Cost (With 25% Markup)
                                         </p>
 
                                         <p class="text-lg font-bold text-gray-900 mt-1">
@@ -291,22 +291,19 @@
             </div>
 
             <!-- Pagination -->
-            <div v-if="generations.links?.length > 3" class="flex flex-wrap justify-center items-center gap-2 mt-8">
-
-                <template v-for="(link, index) in generations.links" :key="index">
-
-                    <Link v-if="link.url" :href="link.url" preserve-scroll
-                        class="px-4 py-2 rounded-lg border text-sm transition" :class="link.active
+            <div v-if="generations.meta?.links?.length > 3" class="flex flex-wrap gap-2 justify-end mt-8">
+                <Link v-for="(link, index) in generations.meta.links" :key="index" :href="link.url || '#'" :preserve-scroll="true"
+                    :class="[
+                        'px-3 py-2 border rounded-lg text-sm transition',
+                        link.active
                             ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white text-gray-700 hover:bg-gray-100'">
-                    <span v-html="link.label"></span>
-                    </Link>
-
-                    <span v-else class="px-4 py-2 rounded-lg border text-sm
-                               text-gray-400 bg-gray-50" v-html="link.label"></span>
-
-                </template>
-
+                            : 'bg-white text-gray-700 hover:bg-gray-100',
+                        !link.url
+                            ? 'opacity-40 pointer-events-none'
+                            : ''
+                    ]">
+                <span v-html="link.label"></span>
+                </Link>
             </div>
 
         </div>
