@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 use UnexpectedValueException;
+use RuntimeException;
 
 /**
  * Manages the complete image generation lifecycle.
@@ -130,8 +131,8 @@ class GenerationService
         ];
 
         try {
-            // Submit the generation request to Pixelforge.
-            $result = $this->pixelforge->createGeneration(
+            // Submit generation request to Pixelforge with automatic retries for overloaded responses
+            $result = $this->createGenerationWithRetries(
                 $payload,
                 $idempotencyKey
             );
@@ -195,6 +196,63 @@ class GenerationService
             );
         }
     }
+
+    
+    /**
+     * Submit generation with automatic retries for overloaded responses.
+     *
+     * Maximum 3 attempts (1 initial + 2 retries).
+     * Reuses the same idempotency key for every attempt.
+     */
+    private function createGenerationWithRetries(
+        array $payload,
+        string $idempotencyKey
+    ): array {
+        $maxAttempts = 3;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                // Submit the generation request to Pixelforge.
+                return $this->pixelforge->createGeneration(
+                    $payload,
+                    $idempotencyKey
+                );
+
+            } catch (RequestException $exception) {
+                $response = $exception->response;
+
+                $errorCode = $response?->json('error.code');
+
+                // Only retry HTTP 503 overloaded responses.
+                if (
+                    $response?->status() !== 503 ||
+                    $errorCode !== 'overloaded' ||
+                    $attempt === $maxAttempts
+                ) {
+                    throw $exception;
+                }
+
+                // Read Retry-After header.
+                $retryAfter = $response->header('Retry-After');
+
+                $delay = is_numeric($retryAfter)
+                    ? min(10, max(1, (int) $retryAfter))
+                    : 2;
+
+                Log::warning('Pixelforge overloaded. Retrying generation.', [
+                    'generation_id' => $payload['metadata']['generation_id'],
+                    'attempt' => $attempt,
+                    'next_attempt' => $attempt + 1,
+                    'delay_seconds' => $delay,
+                ]);
+
+                sleep($delay);
+            }
+        }
+
+        throw new RuntimeException('Pixelforge retry attempts exhausted.');
+    }
+
 
     /**
      * Calculate the estimated customer price.
@@ -268,7 +326,7 @@ class GenerationService
             if (
                 !in_array(
                     $localGeneration->status,
-                    ['succeeded', 'failed'],
+                    ['succeeded', 'failed', 'rejected'],
                     true
                 ) &&
                 ($providerData['status'] ?? null) === 'processing'
@@ -289,24 +347,71 @@ class GenerationService
         RequestException $exception
     ): array {
         $response = $exception->response;
+
+        $httpStatus = $response?->status();
         $providerError = $response?->json('error');
+        $errorCode = $providerError['code'] ?? null;
 
-        Log::error('Pixelforge generation request rejected', [
+        Log::warning('Pixelforge generation submission rejected', [
             'generation_id' => $generation->id,
-            'http_status' => $response?->status(),
-            'provider_error' => $providerError,
+            'http_status' => $httpStatus,
+            'error_code' => $errorCode,
         ]);
 
-        $generation->update([
-            'status' => 'failed',
-        ]);
+        // Only classify documented submission rejections here.
+        if (
+            ($httpStatus === 400 &&
+                $errorCode === 'content_policy_violation') ||
+            ($httpStatus === 503 &&
+                $errorCode === 'overloaded')
+        ) {
+            $message = $errorCode === 'content_policy_violation'
+                ? 'Your prompt was rejected by the content policy. Please modify your prompt and try again.'
+                : 'Pixelforge is temporarily overloaded. Your credits have been refunded. Please try again shortly.';
 
-        $this->creditService->refundGeneration($generation);
+            DB::transaction(function () use ($generation) {
+                $local = Generation::query()
+                    ->lockForUpdate()
+                    ->findOrFail($generation->id);
+
+                // Do not overwrite an already finalized generation.
+                if (in_array($local->status, [
+                    'succeeded',
+                    'failed',
+                    'rejected',
+                ], true)) {
+                    return;
+                }
+
+                $local->update([
+                    'status' => 'rejected',
+                    'provider_cost' => '0.000000000',
+                    'actual_cost' => '0.000000000',
+                    'provider_usage' => null,
+                    'image_url' => null,
+                    'completed_at' => null,
+                ]);
+
+                // Release the reserved credits.
+                $this->creditService->refundGeneration($local);
+            });
+
+            return $this->failure('generation', $message);
+        }
+
+        // Other HTTP errors should not automatically be classified
+        // as either a processing failure or a documented rejection.
+        // Team need to be manual review.
+        Log::error('Unexpected Pixelforge submission error', [
+            'generation_id' => $generation->id,
+            'http_status' => $httpStatus,
+            'error_code' => $errorCode,
+        ]);
 
         return $this->failure(
             'generation',
             $providerError['message']
-                ?? 'Pixelforge rejected your generation request. Please try again.'
+                ?? 'Unable to submit your generation request. Please contact support if the request remains pending.'
         );
     }
 

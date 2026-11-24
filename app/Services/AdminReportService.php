@@ -66,6 +66,14 @@ class AdminReportService
             ])
             ->count();
 
+        $rejectedCount = Generation::query()
+            ->where('status', 'rejected')
+            ->whereBetween('created_at', [
+                $startDate . ' 00:00:00',
+                $endDate . ' 23:59:59',
+            ])
+            ->count();
+
         /*
          * Daily financial breakdown.
          */
@@ -139,7 +147,7 @@ class AdminReportService
                 'total_generations' =>
                     (int) ($summary->successful_generations ?? 0)
                     + $failedCount,
-
+                'rejected_generations' => $rejectedCount,
                 'user_charges' => (string) (
                     $summary->user_charges ?? '0'
                 ),

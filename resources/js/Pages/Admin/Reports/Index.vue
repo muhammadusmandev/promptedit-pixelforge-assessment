@@ -187,6 +187,16 @@
                 <small>No customer charge</small>
             </div>
 
+            <div class="stat-card failed-card">
+                <span>Rejected generations (Blocked, Overloaded)</span>
+            
+                <h2>
+                    {{ summary.rejected_generations }}
+                </h2>
+            
+                <small>No customer charge</small>
+            </div>
+
             <div class="stat-card">
                 <span>Total generations</span>
 

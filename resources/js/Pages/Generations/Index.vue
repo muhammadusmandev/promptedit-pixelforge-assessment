@@ -180,7 +180,8 @@
                                         </p>
                                     </div>
 
-                                    <div v-else-if="generation.status === 'failed'" class="text-center p-5">
+                                    <div v-else-if="generation.status === 'failed' ||
+                                                  generation.status === 'rejected'" class="text-center p-5">
                                         <div class="text-3xl mb-3">
                                             ⚠️
                                         </div>

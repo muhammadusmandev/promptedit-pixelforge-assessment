@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('size')->nullable();   // Selected image dimensions (e.g. 1024x1024 (default), 1536x1024 or 1024x1536)
             $table->string('quality')->nullable(); // Selected quality (e.g. low, medium (default), high)
             $table->json('reference_urls')->nullable();
-            $table->string('status', 30)->default('queued')->index(); // Generation status: queued, processing, succeeded, failed
+            $table->string('status', 30)->default('queued')->index(); // Generation status: queued, processing, succeeded, failed, rejected
             $table->decimal('estimated_cost', 12, 9)->default(0);  // Estimated amount charged to customer with 25% markup
             $table->decimal('actual_cost', 12, 9)->nullable();     // Customer's billed cost with 25% markup
             $table->decimal('provider_cost', 12, 9)->nullable();    // Actual Pixelforge cost with 0% markup

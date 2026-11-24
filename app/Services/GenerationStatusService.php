@@ -53,7 +53,7 @@ class GenerationStatusService
             }
 
             // Never change an already finalized generation.
-            if (in_array($local->status, ['succeeded', 'failed'], true)) {
+            if (in_array($local->status, ['succeeded', 'failed', 'rejected'], true)) {
                 $local->save();
                 return;
             }

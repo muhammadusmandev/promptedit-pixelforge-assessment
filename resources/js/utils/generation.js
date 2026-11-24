@@ -32,6 +32,7 @@ export const statusClass = (status) => {
         processing: 'bg-blue-100 text-blue-800',
         succeeded: 'bg-green-100 text-green-800',
         failed: 'bg-red-100 text-red-800',
+        rejected: 'bg-red-100 text-red-800',
     };
 
     return classes[status] || 'bg-gray-100 text-gray-700';
@@ -46,6 +47,7 @@ export const statusLabel = (status) => {
         processing: 'Processing',
         succeeded: 'Succeeded',
         failed: 'Failed',
+        rejected: 'Rejected',
     };
 
     return labels[status] || status;
