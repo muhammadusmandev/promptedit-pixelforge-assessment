@@ -188,7 +188,7 @@
             </div>
 
             <div class="stat-card failed-card">
-                <span>Rejected generations (Blocked, Overloaded)</span>
+                <span>Rejected generations (Blocked, Overloaded etc.)</span>
             
                 <h2>
                     {{ summary.rejected_generations }}

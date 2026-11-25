@@ -212,7 +212,6 @@ class GenerationService
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             try {
-                // Submit the generation request to Pixelforge.
                 return $this->pixelforge->createGeneration(
                     $payload,
                     $idempotencyKey
@@ -221,26 +220,43 @@ class GenerationService
             } catch (RequestException $exception) {
                 $response = $exception->response;
 
+                $httpStatus = $response?->status();
                 $errorCode = $response?->json('error.code');
 
-                // Only retry HTTP 503 overloaded responses.
-                if (
-                    $response?->status() !== 503 ||
-                    $errorCode !== 'overloaded' ||
-                    $attempt === $maxAttempts
-                ) {
+                // Identify documented retryable errors.
+                $retryable =
+                    (
+                        $httpStatus === 503 &&
+                        $errorCode === 'overloaded'
+                    ) ||
+                    (
+                        $httpStatus === 429 &&
+                        in_array($errorCode, [
+                            'rate_limit_exceeded',
+                            'concurrency_limit_exceeded',
+                        ], true)
+                    );
+
+                // Do not retry unknown errors or after final attempt.
+                if (!$retryable || $attempt === $maxAttempts) {
                     throw $exception;
                 }
 
-                // Read Retry-After header.
+                // Pixelforge provides Retry-After in seconds.
                 $retryAfter = $response->header('Retry-After');
 
-                $delay = is_numeric($retryAfter)
-                    ? min(10, max(1, (int) $retryAfter))
-                    : 2;
+                // Increasing fallback backoff: 2 seconds, then 4 seconds.
+                $backoff = 2 ** $attempt;
 
-                Log::warning('Pixelforge overloaded. Retrying generation.', [
+                // Respect Retry-After; never retry earlier than requested.
+                $delay = is_numeric($retryAfter)
+                    ? max((int) $retryAfter, $backoff)
+                    : $backoff;
+
+                Log::warning('Pixelforge request rate limited or overloaded. Retrying.', [
                     'generation_id' => $payload['metadata']['generation_id'],
+                    'http_status' => $httpStatus,
+                    'error_code' => $errorCode,
                     'attempt' => $attempt,
                     'next_attempt' => $attempt + 1,
                     'delay_seconds' => $delay,
@@ -250,7 +266,9 @@ class GenerationService
             }
         }
 
-        throw new RuntimeException('Pixelforge retry attempts exhausted.');
+        throw new RuntimeException(
+            'Pixelforge retry attempts exhausted.'
+        );
     }
 
 
@@ -359,15 +377,35 @@ class GenerationService
         ]);
 
         // Only classify documented submission rejections here.
-        if (
-            ($httpStatus === 400 &&
-                $errorCode === 'content_policy_violation') ||
-            ($httpStatus === 503 &&
-                $errorCode === 'overloaded')
-        ) {
-            $message = $errorCode === 'content_policy_violation'
-                ? 'Your prompt was rejected by the content policy. Please modify your prompt and try again.'
-                : 'Pixelforge is temporarily overloaded. Your credits have been refunded. Please try again shortly.';
+        $rejections = [
+            400 => ['content_policy_violation'],
+            429 => [
+                'rate_limit_exceeded',
+                'concurrency_limit_exceeded',
+                'daily_limit_exceeded',
+            ],
+            503 => ['overloaded'],
+        ];
+
+        if (in_array($errorCode, $rejections[$httpStatus] ?? [], true)) {
+            $messages = [
+                'content_policy_violation' =>
+                    'Your prompt was rejected by the content policy. Please modify your prompt and try again.',
+
+                'overloaded' =>
+                    'Pixelforge is temporarily overloaded. Please try again shortly.',
+
+                'rate_limit_exceeded' =>
+                    'Too many API requests. Please wait a moment and try again.',
+
+                'concurrency_limit_exceeded' =>
+                    'Pixelforge is currently processing its maximum number of generations. Please try again shortly.',
+
+                'daily_limit_exceeded' =>
+                    'Pixelforge daily 500 generations quota has been reached. Please try again after the UTC daily quota resets.',
+            ];
+
+            $message = $messages[$errorCode];
 
             DB::transaction(function () use ($generation) {
                 $local = Generation::query()
